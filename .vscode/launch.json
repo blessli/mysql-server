@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "debug mysql",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/usr/local/mysql/bin/mysqld",
+            "args": ["--defaults-file=/usr/local/mysql/etc/my.cnf"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false
+        }
+    ]
+}

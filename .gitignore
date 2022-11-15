@@ -16,5 +16,5 @@ source_downloads
 [._]ss[a-gi-z]
 [._]sw[a-p]
 
-# Configuration files for Visual Studio Code
-.vscode/
+# 编译产物
+build
