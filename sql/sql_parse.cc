@@ -1263,6 +1263,7 @@ bool do_command(THD *thd) {
     See init_net_server_extension()
   */
   thd->m_server_idle = true;
+  // 根据不同的协议解包命令
   rc = thd->get_protocol()->get_command(&com_data, &command);
   thd->m_server_idle = false;
 
@@ -1316,7 +1317,7 @@ bool do_command(THD *thd) {
   my_net_set_read_timeout(net, thd->variables.net_read_timeout);
 
   DEBUG_SYNC(thd, "before_command_dispatch");
-
+  // 实际处理入口，根据不同的 command 分发
   return_value = dispatch_command(thd, &com_data, command);
   thd->get_protocol_classic()->get_output_packet()->shrink(
       thd->variables.net_buffer_length);
@@ -1642,7 +1643,7 @@ bool dispatch_command(THD *thd, const COM_DATA *com_data,
                          command_name[command].str)) {
     goto done;
   }
-
+  // 根据不同的命令分发处理
   switch (command) {
     case COM_INIT_DB: {
       LEX_STRING tmp;
@@ -1820,6 +1821,7 @@ bool dispatch_command(THD *thd, const COM_DATA *com_data,
       const LEX_CSTRING orig_query = thd->query();
 
       Parser_state parser_state;
+      // 词法分析初始化
       if (parser_state.init(thd, thd->query().str, thd->query().length)) break;
 
       // we produce digest if it's not explicitly turned off
@@ -1837,7 +1839,7 @@ bool dispatch_command(THD *thd, const COM_DATA *com_data,
 
       copy_bind_parameter_values(thd, com_data->com_query.parameters,
                                  com_data->com_query.parameter_count);
-
+      // 这里只分析查询命令
       dispatch_sql_command(thd, &parser_state);
 
       // Check if the statement failed and needs to be restarted in
@@ -4880,6 +4882,7 @@ void dispatch_sql_command(THD *thd, Parser_state *parser_state) {
   DBUG_EXECUTE_IF("parser_debug", turn_parser_debug_on(););
 
   mysql_reset_thd_for_next_command(thd);
+  // 语法解析
   lex_start(thd);
 
   thd->m_parser_state = parser_state;
@@ -4897,6 +4900,7 @@ void dispatch_sql_command(THD *thd, Parser_state *parser_state) {
   bool err = thd->get_stmt_da()->is_error();
 
   if (!err) {
+    // 语法解析
     err = parse_sql(thd, parser_state, nullptr);
     if (!err) err = invoke_post_parse_rewrite_plugins(thd, false);
 
@@ -4917,6 +4921,8 @@ void dispatch_sql_command(THD *thd, Parser_state *parser_state) {
       If rewriting does not happen here, thd->m_rewritten_query is still
       empty from being reset in alloc_query().
     */
+    // 查询优化
+    // MySQL8.0取消了query cache
     if (thd->rewritten_query().length() == 0) mysql_rewrite_query(thd);
 
     if (thd->rewritten_query().length()) {
@@ -4937,6 +4943,7 @@ void dispatch_sql_command(THD *thd, Parser_state *parser_state) {
 
     if (!(opt_general_log_raw || thd->slave_thread)) {
       if (thd->rewritten_query().length())
+        // 固化查询日志
         query_logger.general_log_write(thd, COM_QUERY,
                                        thd->rewritten_query().ptr(),
                                        thd->rewritten_query().length());
@@ -4996,7 +5003,7 @@ void dispatch_sql_command(THD *thd, Parser_state *parser_state) {
           auto mgr_ptr = resourcegroups::Resource_group_mgr::instance();
           bool switched = mgr_ptr->switch_resource_group_if_needed(
               thd, &src_res_grp, &dest_res_grp, &ticket, &cur_ticket);
-
+          // 执行sql命令
           error = mysql_execute_command(thd, true);
 
           if (switched)

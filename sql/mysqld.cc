@@ -6655,6 +6655,7 @@ int mysqld_main(int argc, char **argv)
   orig_argv = argv;
   my_getopt_use_args_separator = true;
   my_defaults_read_login_file = false;
+  // 加载配置
   if (load_defaults(MYSQL_CONFIG_NAME, load_default_groups, &argc, &argv,
                     &argv_alloc)) {
     flush_error_log_messages();
@@ -7586,6 +7587,7 @@ int mysqld_main(int argc, char **argv)
   }
 
   mysqld_socket_acceptor->check_and_spawn_admin_connection_handler_thread();
+  // 启动接收请求的工作loop
   mysqld_socket_acceptor->connection_event_loop();
 #endif /* _WIN32 */
   server_operational_state = SERVER_SHUTTING_DOWN;
@@ -7640,6 +7642,7 @@ int mysqld_main(int argc, char **argv)
 
   clean_up(true);
   sysd::notify("STATUS=Server shutdown complete");
+  // 退出初始化
   mysqld_exit(signal_hand_thr_exit_code);
 }
 

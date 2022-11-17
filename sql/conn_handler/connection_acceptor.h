@@ -58,9 +58,11 @@ class Connection_acceptor {
     Connection acceptor loop to accept connections from clients.
   */
   void connection_event_loop() {
+    // 获取连接管理实例（单例模式）
     Connection_handler_manager *mgr =
         Connection_handler_manager::get_instance();
     while (!connection_events_loop_aborted()) {
+      // 从复用 IO fd 链中取出一个连接做处理，其实本质就是我们熟悉的 poll 和 select
       Channel_info *channel_info = m_listener->listen_for_connection_event();
       if (channel_info != nullptr) mgr->process_new_connection(channel_info);
     }

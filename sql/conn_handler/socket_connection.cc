@@ -1338,6 +1338,7 @@ const Listen_socket *Mysqld_socket_listener::get_listen_socket() const {
 }
 
 Channel_info *Mysqld_socket_listener::listen_for_connection_event() {
+// 优先选择 poll ，否则使用 select
 #ifdef HAVE_POLL
   int retval = poll(&m_poll_info.m_fds[0], m_socket_vector.size(), -1);
 #else

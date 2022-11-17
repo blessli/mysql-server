@@ -292,12 +292,14 @@ static void *handle_connection(void *arg) {
     mysql_thread_set_psi_THD(thd);
     MYSQL_SOCKET socket = thd->get_protocol_classic()->get_vio()->mysql_socket;
     mysql_socket_set_thread_owner(socket);
+    // 加入线程池
     thd_manager->add_thd(thd);
-
+    // 预处理
     if (thd_prepare_connection(thd))
       handler_manager->inc_aborted_connects();
     else {
       while (thd_connection_alive(thd)) {
+        // 一直处理当前的任务
         if (do_command(thd)) break;
       }
       end_connection(thd);
@@ -326,7 +328,7 @@ static void *handle_connection(void *arg) {
 
     // Server is shutting down so end the pthread.
     if (connection_events_loop_aborted()) break;
-
+    // 释放连接
     channel_info = Per_thread_connection_handler::block_until_new_connection();
     if (channel_info == nullptr) break;
     pthread_reused = true;
@@ -398,7 +400,7 @@ bool Per_thread_connection_handler::add_connection(Channel_info *channel_info) {
 
   // Simulate thread creation for test case before we check thread cache
   DBUG_EXECUTE_IF("fail_thread_create", error = 1; goto handle_error;);
-
+  // 检测当前空闲的线程，如果没有空闲的线程，放入等待队列里并退出
   if (!check_idle_thread_and_enqueue_connection(channel_info)) return false;
 
   /*
@@ -406,6 +408,7 @@ bool Per_thread_connection_handler::add_connection(Channel_info *channel_info) {
     connection. Create a new thread to handle the connection
   */
   channel_info->set_prior_thr_create_utime();
+  // 创建 mysql 线程，这里其实是假的创建，只是从线程池里捞一个出来使用
   error =
       mysql_thread_create(key_thread_one_connection, &id, &connection_attrib,
                           handle_connection, (void *)channel_info);
